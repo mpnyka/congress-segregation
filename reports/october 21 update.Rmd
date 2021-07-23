@@ -1,0 +1,200 @@
+---
+title: "Report october 21"
+author: "Mireia Triguero"
+date: "10/21/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, comment=NA, warning=FALSE, message=FALSE)
+library(wesanderson)
+library(tidyverse)
+library(xtable)
+library(stargazer)
+setwd("~/Desktop/Sociology/RA/Data")
+staff_salaries <- read_csv("staff_salaries_full.csv") %>%
+  mutate(race_member2 = case_when(race_member == 0 ~ "White",
+                                  race_member == 1 ~ "Black",
+                                  race_member == 2 ~ "Hispanic",
+                                  race_member == 3 ~ "Asian",
+                                  TRUE ~ NA_character_))
+options(qwraps2_markup = "markdown")
+race_staffer <- read_csv("race_staffer.csv") %>% dplyr::select(-X1)
+
+multiply100 <- function(x){
+  x1 <- x*100
+  return(x1)
+}
+```
+## Racial make up for the House:
+
+
+```{r}
+
+staff_salaries %>% filter(office_type_id =="HM") %>% 
+  distinct(core_person_id, .keep_all = TRUE) %>%
+  group_by(race) %>% 
+  summarise(n = n()) %>%
+  ungroup() %>%
+  mutate(percentage = round(n/sum(n)*100, 1)) 
+
+```
+## Racial make up for Congress:
+
+
+```{r}
+
+staff_salaries %>% filter(office_type_id =="HM" | office_type_id =="SM") %>% 
+  distinct(core_person_id, office_type_id, .keep_all = TRUE) %>%
+  group_by(race) %>% 
+  summarise(n = n()) %>%
+  ungroup() %>%
+  mutate(percentage = round(n/sum(n)*100, 1)) 
+
+```
+
+## Revised chart of the racial and gender make up for the House
+
+This is the same one as in the october_6_report_updated pdf. 
+```{r}
+staff_salaries %>% filter(office_type_id =="HM") %>% 
+  filter(!is.na(gender)) %>% group_by(race, gender, core_person_id) %>% 
+  summarise(n = n()) %>%
+  dplyr::select(-n) %>%
+  group_by(race, gender) %>% 
+  summarise(n = n()) %>%
+  ungroup() %>%
+  mutate(percentage = round(n/sum(n)*100,1)) 
+```
+## Revised chart of the racial and gender make up for Congress:
+
+```{r}
+staff_salaries %>% filter(office_type_id =="HM" | office_type_id =="SM") %>% 
+  filter(!is.na(gender)) %>% group_by(race, gender, core_person_id) %>% 
+  summarise(n = n()) %>%
+  dplyr::select(-n) %>%
+  group_by(race, gender) %>% 
+  summarise(n = n()) %>%
+  ungroup() %>%
+  mutate(percentage = round(n/sum(n)*100,1)) 
+```
+
+## Racial composition of members of Congress in our dataset. Race alone:
+
+```{r}
+staff_salaries %>% filter(office_type_id =="HM" | office_type_id =="SM" ) %>% 
+  distinct(member_id, .keep_all = TRUE) %>%
+  group_by(race_member2) %>% 
+  summarise(n = n()) %>%
+  ungroup() %>%
+  mutate(percentage = round(n/sum(n)*100,1))
+````
+
+## and then a chart by race and party: Republicans
+```{r }
+staff_salaries %>% filter(office_type_id =="HM" | office_type_id =="SM") %>% 
+  filter(party_id == 1) %>%
+  distinct(member_id, .keep_all = TRUE) %>%
+  group_by(race_member2) %>% 
+  summarise(n = n()) %>%
+  ungroup() %>%
+  mutate(percentage = round(n/sum(n)*100,1))
+````
+
+## And then a chart by race and party: Democrats
+```{r cars}
+staff_salaries %>% filter(office_type_id =="HM" | office_type_id =="SM") %>% 
+  filter(party_id == 2) %>%
+  distinct(member_id, .keep_all = TRUE) %>%
+  group_by( race_member2) %>% 
+  summarise(n = n()) %>%
+  ungroup() %>%
+  mutate(percentage = round(n/sum(n)*100,1))
+````
+
+## Can I also have a table that illustrates the employment of racial groups by the race of lawmakers.
+
+
+```{r}
+staff_salaries %>% filter(office_type_id =="HM" | office_type_id == "SM") %>%
+  distinct(member_id, core_person_id, .keep_all = TRUE) %>%
+  group_by(race_member2) %>%
+  summarise_at(c("black", "white", "asian", "hispanic"), mean) %>%
+  mutate_if(is.numeric, multiply100) %>%
+  mutate_if(is.numeric, round, 1) 
+```
+
+## Thus can I have a chart for Racial Composition of Congressional Offices According to lawmakers’ Race and Ethnicity: House
+
+```{r}
+
+staff_salaries %>% filter(office_type_id =="HM") %>%
+  distinct(member_id, core_person_id, .keep_all = TRUE) %>%
+  group_by(race_member2) %>%
+  summarise_at(c("black", "white", "asian", "hispanic"), mean) %>%
+  mutate_if(is.numeric, multiply100) %>%
+  mutate_if(is.numeric, round, 1) 
+
+```
+
+## Thus can i have a chart for Racial Composition of Congressional Offices According to lawmakers’ Race and Ethnicity: Senate
+
+```{r}
+
+staff_salaries %>% filter(office_type_id =="SM") %>%
+  distinct(member_id, core_person_id, .keep_all = TRUE) %>%
+  group_by(race_member2) %>%
+  summarise_at(c("black", "white", "asian", "hispanic"), mean) %>%
+  mutate_if(is.numeric, multiply100) %>%
+  mutate_if(is.numeric, round, 1) 
+
+```
+
+## a chart  for the racial composition of congressional offices by political party for the House , Senate, and Congress. i.e. What is the racial composition of Democratic offices in the House, Senate, and Overall
+
+```{r}
+
+p1 <- staff_salaries %>% filter(office_type_id =="SM" | office_type_id == "HM") %>%
+  filter(party_id == 2) %>%
+  distinct(member_id, core_person_id, .keep_all = TRUE) %>%
+  group_by(office_type_id) %>%
+  summarise_at(c("black", "white", "asian", "hispanic"), mean) %>%
+  mutate_if(is.numeric, multiply100) %>%
+  mutate_if(is.numeric, round, 1) 
+
+p2 <- staff_salaries %>% filter(office_type_id =="SM" | office_type_id == "HM") %>%
+  filter(party_id == 2) %>%
+  distinct(member_id, core_person_id, .keep_all = TRUE) %>%
+  summarise_at(c("black", "white", "asian", "hispanic"), mean) %>%
+  mutate_if(is.numeric, multiply100) %>%
+  mutate_if(is.numeric, round, 1) %>%
+  mutate(office_type_id = "Congress")
+
+bind_rows(p1,p2)
+
+```
+
+## A chart  for the racial composition of congressional offices by political party for the House , Senate, and Congress. i.e. What is the racial composition of Republican offices in the House, Senate, and Overall
+
+```{r}
+
+p3 <- staff_salaries %>% filter(office_type_id =="SM" | office_type_id == "HM") %>%
+  filter(party_id == 1) %>%
+  distinct(member_id, core_person_id, .keep_all = TRUE) %>%
+  group_by(office_type_id) %>%
+  summarise_at(c("black", "white", "asian", "hispanic"), mean) %>%
+  mutate_if(is.numeric, multiply100) %>%
+  mutate_if(is.numeric, round, 1) 
+
+p4 <- staff_salaries %>% filter(office_type_id =="SM" | office_type_id == "HM") %>%
+  filter(party_id == 1) %>%
+  distinct(member_id, core_person_id, .keep_all = TRUE) %>%
+  summarise_at(c("black", "white", "asian", "hispanic"), mean) %>%
+  mutate_if(is.numeric, multiply100) %>%
+  mutate_if(is.numeric, round, 1) %>%
+  mutate(office_type_id = "Congress")
+
+bind_rows(p3,p4)
+```

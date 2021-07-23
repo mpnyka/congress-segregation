@@ -1,0 +1,314 @@
+---
+title: "Report for James"
+author: "Mireia Triguero"
+date: "10/5/2020"
+output:
+  pdf_document: default
+  html_document: default 
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, comment=NA, warning=FALSE, message=FALSE)
+library(wesanderson)
+library(tidyverse)
+library(xtable)
+library(stargazer)
+setwd("~/Desktop/Sociology/RA/Data")
+staff_salaries <- read_csv("staff_salaries_full.csv") %>%
+  mutate(race_member2 = case_when(race_member == 0 ~ "White",
+                                  race_member == 1 ~ "Black",
+                                  race_member == 2 ~ "Hispanic",
+                                  race_member == 3 ~ "Asian",
+                                  TRUE ~ NA_character_))
+options(qwraps2_markup = "markdown")
+race_staffer <- read_csv("race_staffer.csv") %>% dplyr::select(-X1)
+
+multiply100 <- function(x){
+  x1 <- x*100
+  return(x1)
+}
+```
+
+##  The racial  and gender make up for the House 
+```{r house}
+
+staff_salaries %>% filter(office_type_id =="HM") %>% 
+  filter(!is.na(gender)) %>% group_by(race, gender, core_person_id) %>% 
+  summarise(n = n()) %>%
+  dplyr::select(-n) %>%
+  group_by(race, gender) %>% 
+  summarise(n = n()) %>%
+  ungroup() %>%
+  mutate(percentage = round(n/sum(n)*100,1)) 
+
+```
+##  The racial and gender make up for the Senate 
+```{r senate}
+
+staff_salaries %>% filter(office_type_id =="SM") %>% 
+filter(!is.na(gender)) %>% group_by(race, gender, core_person_id) %>% 
+  summarise(n = n()) %>%
+  dplyr::select(-n) %>%
+  group_by(race, gender) %>% 
+  summarise(n = n()) %>%
+  ungroup() %>%
+  mutate(percentage = round(n/sum(n)*100,1))
+
+```
+
+# Office composition by lawmaker’s race and political party in the House and Senate (i.e. White Democrats, White Republicans, Black Democrats, Black Republicans)
+
+## House Democrats
+```{r House, democrat, white}
+
+
+staff_salaries %>% filter(office_type_id =="HM" & party_id == 2) %>%
+  distinct(member_id, core_person_id, .keep_all = TRUE) %>%
+  group_by(race_member2) %>%
+  summarise_at(c("black", "white", "asian", "hispanic"), mean) %>%
+  mutate_if(is.numeric, multiply100) %>%
+  mutate_if(is.numeric, round, 1) 
+
+```
+
+## House Republicans
+```{r House, republicans}
+
+staff_salaries %>% filter(office_type_id =="HM" & party_id == 1) %>% 
+  distinct(member_id, core_person_id, .keep_all = TRUE) %>%
+  group_by(race_member2) %>%
+  summarise_at(c("black", "white", "asian", "hispanic"), mean) %>%
+  mutate_if(is.numeric, multiply100) %>%
+  mutate_if(is.numeric, round, 1) 
+
+
+```
+
+
+## Senate Democrats
+```{r senate, democrat}
+
+staff_salaries %>% filter(office_type_id =="SM" & party_id == 2) %>%
+  distinct(member_id, core_person_id, .keep_all = TRUE) %>%
+  group_by(race_member2) %>%
+  summarise_at(c("black", "white", "asian", "hispanic"), mean) %>%
+  mutate_if(is.numeric, multiply100) %>%
+  mutate_if(is.numeric, round, 1) 
+
+
+```
+## Senate Republicans (No Black Rep. Senators in the data)
+
+```{r senate, republican}
+
+staff_salaries %>% filter(office_type_id =="SM" & party_id == 1) %>%
+  distinct(member_id, core_person_id, .keep_all = TRUE) %>%
+  group_by(race_member2) %>%
+  filter(race_member != 1) %>%
+  summarise_at(c("black", "white", "asian", "hispanic"), mean) %>%
+  mutate_if(is.numeric, multiply100) %>%
+  mutate_if(is.numeric, round, 1)
+
+
+```
+
+## Racial composition of staff Ranking by lawmaker’s race and political party  in the  House and Senate (i.e. White Democrats, White Republicans, Black Democrats, Black Republicans)
+
+## House: White Democrats
+
+```{r}
+
+staff_salaries %>% filter(office_type_id =="HM" & party_id == 2 & race_member == 0) %>%
+  distinct(member_id, core_person_id, rank, .keep_all = TRUE) %>%
+  group_by(rank) %>%
+  summarise_at(c("black", "white", "asian", "hispanic"), mean) %>%
+  mutate_at(c("black", "white", "asian", "hispanic"), multiply100) %>%
+  mutate_if(is.numeric, round, 1)
+
+
+```
+## House: Black Democrats
+
+```{r}
+
+staff_salaries %>% filter(office_type_id =="HM" & party_id == 2 & race_member == 1) %>%
+  distinct(member_id, core_person_id, rank, .keep_all = TRUE) %>%
+  group_by(rank) %>%
+  summarise_at(c("black", "white", "asian", "hispanic"), mean) %>%
+  mutate_at(c("black", "white", "asian", "hispanic"), multiply100) %>%
+  mutate_if(is.numeric, round, 1)
+
+
+```
+## House: Hispanic Democrats
+
+```{r}
+
+staff_salaries %>% filter(office_type_id =="HM" & party_id == 2 & race_member == 2) %>% 
+    distinct(member_id, core_person_id, rank, .keep_all = TRUE) %>%
+  group_by(rank) %>%
+  summarise_at(c("black", "white", "asian", "hispanic"), mean) %>%
+  mutate_at(c("black", "white", "asian", "hispanic"), multiply100) %>%
+  mutate_if(is.numeric, round, 1)
+
+```
+## House: Asian Democrats
+
+```{r}
+
+staff_salaries %>% filter(office_type_id =="HM" & party_id == 2 & race_member == 3) %>%
+    distinct(member_id, core_person_id, rank, .keep_all = TRUE) %>%
+  group_by(rank) %>%
+  summarise_at(c("black", "white", "asian", "hispanic"), mean) %>%
+  mutate_at(c("black", "white", "asian", "hispanic"), multiply100) %>%
+  mutate_if(is.numeric, round, 1)
+
+```
+## House: White Republicans
+
+```{r}
+
+staff_salaries %>% filter(office_type_id =="HM" & party_id == 1 & race_member == 0) %>%
+    distinct(member_id, core_person_id, rank, .keep_all = TRUE) %>%
+  group_by(rank) %>%
+  summarise_at(c("black", "white", "asian", "hispanic"), mean) %>%
+  mutate_at(c("black", "white", "asian", "hispanic"), multiply100) %>%
+  mutate_if(is.numeric, round, 1)
+
+
+```
+## House: Black Republicans
+
+```{r}
+
+staff_salaries %>% filter(office_type_id =="HM" & party_id == 1 & race_member == 1) %>% 
+    distinct(member_id, core_person_id, rank, .keep_all = TRUE) %>%
+  group_by(rank) %>%
+  summarise_at(c("black", "white", "asian", "hispanic"), mean) %>%
+  mutate_at(c("black", "white", "asian", "hispanic"), multiply100) %>%
+  mutate_if(is.numeric, round, 1)
+
+```
+## House: Hispanic Republicans
+
+```{r}
+
+staff_salaries %>% filter(office_type_id =="HM" & party_id == 1 & race_member == 2) %>% 
+    distinct(member_id, core_person_id, rank, .keep_all = TRUE) %>%
+  group_by(rank) %>%
+  summarise_at(c("black", "white", "asian", "hispanic"), mean) %>%
+  mutate_at(c("black", "white", "asian", "hispanic"), multiply100) %>%
+  mutate_if(is.numeric, round, 1)
+
+```
+
+## House: Asian Republicans
+
+```{r}
+
+staff_salaries %>% filter(office_type_id =="HM" & party_id == 1 & race_member == 3) %>% 
+    distinct(member_id, core_person_id, rank, .keep_all = TRUE) %>%
+  group_by(rank) %>%
+  summarise_at(c("black", "white", "asian", "hispanic"), mean) %>%
+  mutate_at(c("black", "white", "asian", "hispanic"), multiply100) %>%
+  mutate_if(is.numeric, round, 1)
+
+```
+
+## Senate: White Democrats
+
+```{r}
+
+staff_salaries %>% filter(office_type_id =="SM" & party_id == 2 & race_member == 0) %>% 
+    distinct(member_id, core_person_id, rank, .keep_all = TRUE) %>%
+  group_by(rank) %>%
+  summarise_at(c("black", "white", "asian", "hispanic"), mean) %>%
+  mutate_at(c("black", "white", "asian", "hispanic"), multiply100) %>%
+  mutate_if(is.numeric, round, 1)
+
+
+```
+
+## Senate: Black Democrats
+
+```{r}
+
+staff_salaries %>% filter(office_type_id =="SM" & party_id == 2 & race_member == 1) %>% 
+    distinct(member_id, core_person_id, rank, .keep_all = TRUE) %>%
+  group_by(rank) %>%
+  summarise_at(c("black", "white", "asian", "hispanic"), mean) %>%
+  mutate_at(c("black", "white", "asian", "hispanic"), multiply100) %>%
+  mutate_if(is.numeric, round, 1)
+
+```
+
+## Senate: Hispanic Democrats
+
+```{r}
+
+staff_salaries %>% filter(office_type_id =="SM" & party_id == 2 & race_member == 2) %>% 
+    distinct(member_id, core_person_id, rank, .keep_all = TRUE) %>%
+  group_by(rank) %>%
+  summarise_at(c("black", "white", "asian", "hispanic"), mean) %>%
+  mutate_at(c("black", "white", "asian", "hispanic"), multiply100) %>%
+  mutate_if(is.numeric, round, 1)
+
+```
+## Senate: Asian Democrats
+
+```{r}
+
+staff_salaries %>% filter(office_type_id =="SM" & party_id == 2 & race_member == 3) %>% 
+    distinct(member_id, core_person_id, rank, .keep_all = TRUE) %>%
+  group_by(rank) %>%
+  summarise_at(c("black", "white", "asian", "hispanic"), mean) %>%
+  mutate_at(c("black", "white", "asian", "hispanic"), multiply100) %>%
+  mutate_if(is.numeric, round, 1)
+
+```
+## Senate: White Republicans
+
+```{r}
+
+staff_salaries %>% filter(office_type_id =="SM" & party_id == 1 & race_member == 0) %>% 
+    distinct(member_id, core_person_id, rank, .keep_all = TRUE) %>%
+  group_by(rank) %>%
+  summarise_at(c("black", "white", "asian", "hispanic"), mean) %>%
+  mutate_at(c("black", "white", "asian", "hispanic"), multiply100) %>%
+  mutate_if(is.numeric, round, 1)
+
+
+```
+## Senate: Black Republicans (doesn't exist in the data)
+
+## Senate: Hispanic Republicans
+
+```{r}
+
+staff_salaries %>% filter(office_type_id =="SM" & party_id == 1 & race_member == 2) %>%
+    distinct(member_id, core_person_id, rank, .keep_all = TRUE) %>%
+  group_by(rank) %>%
+  summarise_at(c("black", "white", "asian", "hispanic"), mean) %>%
+  mutate_at(c("black", "white", "asian", "hispanic"), multiply100) %>%
+  mutate_if(is.numeric, round, 1)
+
+```
+
+## Senate: Asian Republicans
+
+```{r}
+
+staff_salaries %>% filter(office_type_id =="SM" & party_id == 1 & race_member == 3) %>% 
+    distinct(member_id, core_person_id, rank, .keep_all = TRUE) %>%
+  group_by(rank) %>%
+  summarise_at(c("black", "white", "asian", "hispanic"), mean) %>%
+  mutate_at(c("black", "white", "asian", "hispanic"), multiply100) %>%
+  mutate_if(is.numeric, round, 1)
+
+```
+```{r}
+
+
+```
+

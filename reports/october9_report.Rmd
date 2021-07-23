@@ -1,0 +1,218 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+library(tidyverse)
+setwd("~/Desktop/Sociology/RA/Data")
+
+dates_members <- read_csv("dates_members.csv")
+race_staffer <- read_csv("race_staffer.csv") %>% dplyr::select(core_person_id, race, gender)
+dates_congress <- read_csv("dates_congress.csv")
+member_full <- read_csv("member_full.csv")
+
+staffers <- dates_members %>% left_join(race_staffer) %>%
+  left_join(member_full) %>%
+  mutate(white = ifelse(race == "nh_white", 1, 0),
+         black = ifelse(race == "nh_black", 1, 0),
+         hispanic = ifelse(race == "hispanic", 1, 0),
+         asian = ifelse(race == "asian", 1, 0))
+
+staffers_congress <- dates_congress %>% left_join(race_staffer)
+
+```
+# the average days per race of staffer
+
+Here's the average number of days that each staffer worked in congress (it does not include days worked in non-member offices), by racial group of the staffer. However, these differences are only statistically significant for Asians at the 0.05 threshold. 
+
+```{r}
+
+staffers %>% group_by(race, core_person_id) %>% summarize(tot_days = sum(total_days, na.rm = T)) %>%
+  ungroup() %>% group_by(race) %>% summarize(avg_days = mean(tot_days))
+
+staffer_total_time <- staffers %>% group_by(race, core_person_id) %>% summarize(tot_days = sum(total_days, na.rm = T)) %>%   mutate(white = ifelse(race == "nh_white", 1, 0),
+         black = ifelse(race == "nh_black", 1, 0),
+         hispanic = ifelse(race == "hispanic", 1, 0),
+         asian = ifelse(race == "asian", 1, 0))
+# 
+# staffers %>% group_by(race, core_person_id) %>% distinct(core_person_id, year) %>% summarize(tot_days = n()) %>%
+#   ungroup() %>% group_by(race) %>% summarize(avg_years = mean(tot_days))
+
+# summary(lm(tot_days ~ black + hispanic + asian, data = staffer_total_time))
+
+
+```
+
+
+# number of days per race of member and per office 
+
+```{r}
+staffers %>% group_by(race_member, core_person_id) %>% 
+  summarize(tot_days = sum(total_days, na.rm = T)) %>%
+  ungroup() %>% group_by(race_member) %>% summarize(avg_days = mean(tot_days)) %>%
+  mutate(race_member = recode(race_member, `0` = "White", `1` = "Black", `2` = "Hispanic", `3` = "Asian"))
+
+
+```
+
+
+# number of offices each staffer goes to (by race of staffer)
+This only includes congressmember's offices (not committees). Differences are not significant across groups. If I include all the offices, the numbers look very similar, with a very small but significant differences for black staffers (on average they work in -0.05 offices compared to whites)
+
+```{r}
+staffers %>% group_by(race, core_person_id) %>% distinct(core_person_id, member_id, .keep_all = T) %>% summarize(tot_office = n()) %>%
+  ungroup() %>% group_by(race) %>% summarize(avg_office = mean(tot_office))
+
+staffer_total_offices <- staffers %>% group_by(race, core_person_id) %>% distinct(core_person_id, member_id, .keep_all = T) %>% summarize(tot_office = n()) %>%   mutate(white = ifelse(race == "nh_white", 1, 0),
+         black = ifelse(race == "nh_black", 1, 0),
+         hispanic = ifelse(race == "hispanic", 1, 0),
+         asian = ifelse(race == "asian", 1, 0))
+
+# summary(lm(tot_office ~ black + hispanic + asian, data = staffer_total_offices))
+```
+
+```{r}
+# staffers_congress %>%
+#   group_by(race, core_person_id) %>% 
+#   distinct(core_person_id, office_id) %>% 
+#   summarize(tot_office = n()) %>%
+#   ungroup() %>% group_by(race) %>% 
+#   summarize(avg_office = mean(tot_office))
+# 
+# staffer_total_offices <- staffers_congress %>% group_by(race, core_person_id) %>% distinct(core_person_id, office_id) %>% summarize(tot_office = n()) %>%  
+# mutate(white = ifelse(race == "nh_white", 1, 0),
+#          black = ifelse(race == "nh_black", 1, 0),
+#          hispanic = ifelse(race == "hispanic", 1, 0),
+#          asian = ifelse(race == "asian", 1, 0))
+
+# summary(lm(tot_office ~ black + hispanic + asian, data = staffer_total_offices))
+
+
+```
+
+
+
+
+
+# number of offices each staffer goes to based on their first job (race of member)
+
+```{r}
+staffers2000 <- staffers %>% filter(year == 2000)
+
+staffers %>% filter(!core_person_id %in% staffers2000$core_person_id) %>%
+  distinct(member_id, year, core_person_id, .keep_all = T) %>%
+  arrange(year) %>%
+  mutate(first_office = first(race_member)) %>%
+  group_by(first_office, member_id, year) %>% 
+  summarize(tot_staffer = n()) %>%
+  ungroup() %>% group_by(race_member) %>% summarize(avg_staffer = mean(tot_staffer)) %>%
+  mutate(race_member = recode(race_member, `0` = "White", `1` = "Black", `2` = "Hispanic", `3` = "Asian"))
+
+````
+
+
+
+# promotion model from ritchie within and across offices
+
+# house member: how many staffers do they have every year per law-maker. 
+
+Testing hypothesis: in white lawmakers offices there’s more entries and offices.
+The data seems to support this. The differences for Black offices and Hispanic offices are significant, compared to whites (ie. On average, white lawmakers employ more staffers on a given year.)
+
+```{r}
+
+staffers %>% group_by(race_member, member_id, year) %>% 
+  distinct(member_id, year, core_person_id, .keep_all = T) %>%
+  summarize(tot_staffer = n()) %>%
+  ungroup() %>% group_by(race_member) %>% summarize(avg_staffer = mean(tot_staffer)) %>%
+  mutate(race_member = recode(race_member, `0` = "White", `1` = "Black", `2` = "Hispanic", `3` = "Asian"))
+
+staffers_totals <-  staffers %>% group_by(race_member, member_id, year) %>% 
+  distinct(member_id, year, core_person_id, .keep_all = T) %>%
+  summarize(tot_staffer = n()) %>%
+  ungroup() %>%
+  mutate(white = ifelse(race_member == 0, 1, 0),
+          black = ifelse(race_member == 1, 1, 0),
+         hispanic = ifelse(race_member == 2, 1, 0),
+          asian = ifelse(race_member == 3, 1, 0))
+
+summary(lm(tot_staffer ~ black + hispanic + asian, data = staffers_totals))
+
+```
+
+
+# This is more of a networks question: every node is a member and every edge is a staffer. 
+
+```{r}
+## creating and edge list from the data
+library(igraph)
+library(stringr)
+member_names <- read_delim("columbia/member.csv", ";") %>%
+    mutate(full_name = str_replace_all(paste(first_name, last_name), fixed(" "), "_")) %>%
+  select(member_id, full_name)
+
+member_party <- read_delim("columbia/member_party.csv", ";") %>%
+  select(member_id, party_id)
+
+person_office <- staffers %>% left_join (member_names) %>% distinct(core_person_id, full_name) %>%
+  arrange(core_person_id) %>% 
+  mutate(ones = 1) %>%
+  pivot_wider(names_from = full_name, values_from = ones, values_fill = 0) %>%
+  as.matrix()
+
+party_id <- staffers %>% left_join (member_names) %>% 
+  distinct(full_name, member_id) %>% left_join(member_party) %>%
+  distinct(full_name, .keep_all = T) %>% select(party_id) %>%
+  mutate(color = case_when(party_id == 1 ~ "tomato",
+                           party_id == 2 ~ "blue",
+                           TRUE ~ "grey"))
+
+
+person_office2 <- person_office[,-1]
+rownames(person_office2) <- as.vector(person_office[,1])
+
+office_network <- crossprod(person_office2, person_office2)
+
+diag(office_network) <- NA
+
+person.g <- graph.adjacency(office_network,mode="undirected",
+                            weighted=NULL, diag=FALSE)
+
+person.g <- set_vertex_attr(person.g, "party", index = V(person.g), as.vector(party_id$party_id))
+person.g<-set_vertex_attr(person.g, "color", value = as.vector(party_id$color))
+
+
+
+l <- layout_with_fr(person.g)
+l <- norm_coords(l, ymin=-1, ymax=1, xmin=-1, xmax=1)
+
+pdf(file="group-view.pdf", width=10, height=10)
+plot(person.g, layout=l, vertex.size=8, edge.arrow.size = 0.2, 
+     vertex.color = V(person.g)$color, vertex.frame.color="#ffffff",
+     vertex.label=NA)
+dev.off()
+
+plot(person.g, edge.arrow.size = 0.2)
+
+
+```
+
+
+```{r}
+library(tidygraph)
+library(ggraph)
+
+# Or data frames describing nodes and edges:
+as_data_frame(net, what="edges")
+as_data_frame(net, what="vertices")
+
+```
+
+
+
+

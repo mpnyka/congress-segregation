@@ -1,0 +1,260 @@
+---
+title: "Report June 9th"
+author: "Mireia Triguero"
+date: "6/5/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = FALSE, comment=NA, warning=FALSE, message=FALSE)
+library(wesanderson)
+library(stargazer)
+setwd("~/Desktop/Sociology/RA/Data")
+source("james_RA.R")
+options(qwraps2_markup = "markdown")
+race_staffer <- read_csv("race_staffer.csv") %>% dplyr::select(-X1)
+
+```
+
+## House and senate tables add the staffers gender
+
+### For the House
+```{r}
+
+d_salaries_year_house %>% left_join(race_staffer) %>% ungroup() %>% filter(!is.na(gender)) %>% group_by(gender) %>% summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean) %>% mutate_if(is.numeric, round, 2)
+
+```
+
+### For the Senate
+```{r}
+
+d_salaries_year_senate %>% left_join(race_staffer) %>% ungroup() %>% filter(!is.na(gender)) %>% group_by(gender) %>% summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean) %>% mutate_if(is.numeric, round, 2)
+
+```
+
+
+### Salary quintiles House:
+
+The table shows the average probability of being assigned to each racial group for each quintile. Surprisnly, there doesn't seem to be any differences across quintiles. It is possible that quintiles is not fine-grained enough to show differences. I also added the same table but for gender, there seems to be a bit more of a pattern here, but not so clearly. 
+
+
+```{r}
+
+d_salaries_year_house2 <- d_salaries_year_house %>% 
+  filter(total_salary>0 & total_days_worked_year>180) %>%
+  mutate(year_salary = total_salary / total_days_worked_year * 365) %>% ungroup() %>% 
+  left_join(race_staffer) %>% 
+  arrange (core_person_id, year) %>% ungroup() %>% group_by(year) %>%
+  mutate(quintile_salary = ntile(year_salary, 5)) %>%
+  left_join(member_race_gender, by = "member_id")
+
+# d_salaries_year_house3 <- d_salaries_year_house2 %>% 
+#   arrange (core_person_id, year) %>% ungroup() %>% 
+#   group_by(core_person_id) %>% 
+#   mutate(prev_year_salary = lag(year_salary), 
+#          prev_rank = lag(salary_title_id), 
+#          high_salary = ifelse(year_salary > prev_year_salary*1.3 & salary_title_id == prev_rank, 1, 0)) %>% 
+#   filter(high_salary == 0 | year_salary < 300000) %>%
+#   mutate(quintile_salary = ntile(year_salary, 5)) 
+
+d_salaries_year_house2 %>% group_by(quintile_salary) %>% 
+  summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean) %>% 
+  mutate_if(is.numeric, round, 2)
+
+d_salaries_year_house2 %>% 
+  filter(!is.na(gender.x)) %>% 
+  group_by(quintile_salary, gender.x) %>% summarize(n = n()) %>% 
+  mutate(freq = n / sum(n))  %>% 
+  mutate_if(is.numeric, round, 2)
+
+d_salaries_year_house2 %>% filter(!is.na(gender.x)) %>% group_by(quintile_salary, gender.x) %>% 
+  summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean) %>% 
+  mutate_if(is.numeric, round, 2)
+
+
+```
+
+### Salary quintiles Senate:
+
+```{r}
+
+d_salaries_year_senate2 <- d_salaries_year_senate %>% 
+  filter(total_salary>0 & total_days_worked_year>180) %>%
+  mutate(year_salary = total_salary / total_days_worked_year * 365) %>% ungroup() %>% 
+  left_join(race_staffer) %>% 
+  arrange (core_person_id, year) %>% ungroup() %>% 
+  group_by(year) %>% 
+  mutate(quintile_salary = ntile(year_salary, 5)) %>% 
+  left_join(member_race_gender, by = "member_id")
+
+d_salaries_year_senate2 %>% group_by(quintile_salary) %>% 
+  summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean) %>% 
+  mutate_if(is.numeric, round, 2)
+
+d_salaries_year_senate2 %>% 
+  filter(!is.na(gender.x)) %>% 
+  group_by(quintile_salary, gender.x) %>% summarize(n = n()) %>% 
+  mutate(freq = n / sum(n))
+
+d_salaries_year_senate2 %>% filter(!is.na(gender.x)) %>% group_by(quintile_salary, gender.x) %>% 
+  summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean) %>% 
+  mutate_if(is.numeric, round, 2)
+
+
+```
+
+## Can you provide the probabilities of staffers based upon House and Senate lawmakers according to their race and party by quintile.
+
+### Black housemembers:
+
+```{r}
+
+
+d_salaries_year_house2 %>% filter(race.y ==1) %>% 
+  group_by(quintile_salary) %>% 
+  summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean) %>% 
+  mutate_if(is.numeric, round, 2)
+
+
+```
+
+### White housemembers:
+
+```{r}
+
+d_salaries_year_house2 %>% filter(race.y ==0) %>% 
+  group_by(quintile_salary) %>% 
+  summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean) %>% 
+  mutate_if(is.numeric, round, 2)
+
+
+```
+
+### Hispanic housemembers:
+
+```{r}
+
+d_salaries_year_house2 %>% filter(race.y == 2) %>% 
+  group_by(quintile_salary) %>% 
+  summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean) %>% 
+  mutate_if(is.numeric, round, 2)
+
+
+```
+
+### Asian housemembers:
+
+```{r}
+
+d_salaries_year_house2 %>% filter(race.y == 3) %>% 
+  group_by(quintile_salary) %>% 
+  summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean) %>% 
+  mutate_if(is.numeric, round, 2)
+
+
+```
+
+### Black senators:
+
+```{r}
+
+
+d_salaries_year_senate2 %>% filter(race.y ==1) %>% 
+  group_by(quintile_salary) %>% 
+  summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean) %>% 
+  mutate_if(is.numeric, round, 2)
+
+
+```
+
+### White senators:
+
+```{r}
+
+d_salaries_year_senate2 %>% filter(race.y ==0) %>% 
+  group_by(quintile_salary) %>% 
+  summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean) %>% 
+  mutate_if(is.numeric, round, 2)
+
+
+```
+
+### Hispanic senators:
+
+```{r}
+
+d_salaries_year_senate2 %>% filter(race.y == 2) %>% 
+  group_by(quintile_salary) %>% 
+  summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean) %>% 
+  mutate_if(is.numeric, round, 2)
+
+
+```
+### Asian senators:
+
+```{r}
+
+d_salaries_year_senate2 %>% filter(race.y == 3) %>% 
+  group_by(quintile_salary) %>% 
+  summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean) %>% 
+  mutate_if(is.numeric, round, 2)
+
+
+```
+## Average salary differences
+```{r}
+# 
+# 
+# race_prob_salaries_house <- d_salaries_year_house2 %>% 
+#   pivot_longer(c("nh_white", "nh_black", "asian", "hispanic"), "race_prob") %>%
+#   select(race_prob, core_person_id, year, value, year_salary)
+# 
+# race_prob_salaries_house %>% ggplot(aes(x = value, y = year_salary, color = race_prob)) + geom_smooth() +
+#   labs(title = "House average salary", x = "prob of racial group classification")
+# 
+# race_prob_salaries_senate <- d_salaries_year_senate2 %>% 
+#   pivot_longer(c("nh_white", "nh_black", "asian", "hispanic"), "race_prob") %>%
+#   select(race_prob, core_person_id, year, value, year_salary)
+# 
+# race_prob_salaries_senate %>% ggplot(aes(x = value, y = year_salary, color = race_prob)) + geom_smooth() +
+#   labs(title = "House average salary", x = "prob of racial group classification")
+
+
+```
+
+Since the quintile break down didn't seem super informative, here's the output of a very simple regression model showing the average difference between racial groups in yearly salaries. To make this easier, I used the discrete racial categories from the algortihm (instead of the probabilities--we should talk more about this). 
+
+For the house, it shows that on average, a black staffer gets paid 3k less a year than a white staffer, hispanic staffers get paid 2k less than a white staffer, and an asian staffer gets paid 6k less than a white staffer.
+
+For the senate, it shows that on average, a black staffer gets paid 6k less a year than a white staffer, hispanic staffers get paid 7k less than a white staffer, and there doesn't seem to be any differences for asians, compared to whites. 
+
+Both of these include everyone in the dataset, which means it includes top and low level staffers, and it is possible that this pay gap is due to uneven distribution there (as opposed to being paid less for the same job). To disentangle this, we need to figure out how to classify the salary_title (ie. their position). I've spent a good amount of time looking into this, and I have a few questions for you/legistorm/potentially the authors of the other paper before I can move on (more on the email).
+
+```{r}
+
+d_salaries_year_house3 <- d_salaries_year_house2 %>% 
+  mutate(white_race = ifelse(race.x =="nh_white", 1, 0),
+         black_race = ifelse(race.x =="nh_black", 1, 0),
+         asian_race = ifelse(race.x =="asian", 1, 0),
+         hispanic_race = ifelse(race.x =="hispanic", 1, 0)) %>% ungroup()
+
+
+salary_model_house <- lm(year_salary ~  black_race + asian_race + hispanic_race, data = d_salaries_year_house3)
+
+d_salaries_year_senate3 <- d_salaries_year_senate2 %>% 
+  mutate(white_race = ifelse(race.x =="nh_white", 1, 0),
+         black_race = ifelse(race.x =="nh_black", 1, 0),
+         asian_race = ifelse(race.x =="asian", 1, 0),
+         hispanic_race = ifelse(race.x =="hispanic", 1, 0)) %>% ungroup()
+
+
+salary_model_senate <- lm(year_salary ~  black_race + asian_race + hispanic_race, data = d_salaries_year_senate3)
+
+stargazer(salary_model_house, salary_model_senate, title = "Average salary", column.labels = c("House", "Senate"), type= "text", keep.stat = "n", intercept.bottom =T)
+
+```
+
+

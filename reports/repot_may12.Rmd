@@ -1,0 +1,192 @@
+---
+title: "May 12th report"
+author: "Mireia Triguero"
+date: "5/8/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, comment=NA, warning=FALSE, message=FALSE)
+library(stargazer)
+setwd("~/Desktop/Sociology/RA/Data")
+source("james_RA.R")
+options(qwraps2_markup = "markdown")
+
+```
+The following are answering the same questions as last week but getting rid of anyone who was already working in 2000 and counting as first job in the hill those who were first employed in 2001 (or later).
+
+## 1. How long does a staffer work overall (total time in the hill)
+```{r echo=FALSE}
+days_worked <- d_dates_full %>% 
+  filter(!core_person_id %in% old_staffers$core_person_id) %>%
+  ungroup() %>%
+  group_by(core_person_id) %>% summarise(total_days_worked = sum(total_days_worked_period))
+
+
+```
+
+
+On average, the people in the dataset, worked `r round(mean(days_worked$total_days_worked), digits=1)` days. 
+
+Looking at those whose first job was at a member's office (and excluding those whose first job was somewhere else) and based on the race of that member, 
+
+On average, those whose first job was at a black congressperson's office ended up working 150 days more on the hill than those whose first job was at a white person's office. There seems to be a similar trend with those whose first job was at an Asian congressperson's office (80 days more hill experience on average) and with Hispanic (38 days more. This one is only significant at the 0.1 threshold, though).
+
+For next steps, it would be important to come up with a theoretical model of why would we expect first-office experience to have an effect at all on tenure at the hill (so we don't end up chasing spurious correlations). 
+
+NB: this still excludes unpaid internships which in many cases might have been the first job and is not represented here. 
+
+
+```{r days worked}
+
+d_days_office_race <- d_offices_first_full %>% left_join(days_worked, by ="core_person_id")
+
+fit_days_office <- lm(total_days_worked ~ black + asian + hispanic, data = d_days_office_race)
+
+stargazer(fit_days_office, type= "text", digits = 2, keep.stat	 = c("n"), no.space = T)
+
+```
+## How long do staffers stay in their first office job based on the race of the congressperson they work for?
+
+To contrast the above information, I also looked at this question. On average, people whose first job is for a black congressperson stay in that job for 50 days longer, compared to someone whose first job is for a white congressperson. In contrast, those whose first job is for a hispanic congressmember, stay in that first job for 33 days fewer than someone whose first job is with a white congressmember. No significant difference for those whose first job is at an Asian congressmember's office (compared to a white congressmember). 
+```{r}
+
+days_worked_office <- d_dates_full %>% 
+  filter(!core_person_id %in% old_staffers$core_person_id) %>%
+  ungroup() %>%
+  group_by(core_person_id, office_id) %>% summarise(total_days_worked_office = sum(total_days_worked_period))
+
+d_days_office_race2 <- d_offices_first_full %>% left_join(days_worked_office, by ="core_person_id")
+
+
+fit_days_office2 <- lm(total_days_worked_office  ~ black + asian + hispanic, data = d_days_office_race2)
+
+
+```
+
+
+## 3. How many offices on average does a person work in? 
+
+This analysis includes only those whose first job was at a congressperson's office, but then it includes their full trajectory (ie. if they then went to work for non-member offices they are included). The results are similar to what we saw in my report last week. Those who start in non-white offices, seem to end up working for 0.1-0.2 more offices, on average, comapred to those who started working for a white congressperson.
+
+
+
+```{r}
+d_offices_first_full %>% group_by(race) %>% 
+  summarise(avg_office = mean(total_office))
+
+fit_offices_full <- lm(total_office ~ black + asian + hispanic, data = d_offices_first_full)
+
+stargazer(fit_offices_full, type= "text", digits = 2, keep.stat	 = c("n","ser"), no.space = T)
+```
+
+## 4. Considering the member of congress, how many staff do they have on average by race?, how long do their staff work with them? and howmany offices have their staffers worked in (before/total). 
+
+These are alsmost the same as last week's results. There's no significant difference in the average length of a staffer's employment in a member's office based on race. In other words, on average, members of congress's staffers work a similar number of days regardless of the race of the congress member's office they work for. The same seems to be true for the number of staff that congressmembers have (ie. no race differences). However, there seems to be a significant (and somewhat large difference) on the office experience of staffers that work for black members. On average, black congress members hire people who have worked on ~1 more office before they go into a black congress member's office (compared to a white congress member office) and during their time in the hill they will end up working in ~2 more offices. (this second statistic is a bit harder to interpret). 
+
+In contrast with last week, Asian congresmembers also seem to have, on average, staffers with 1 extra office experience before they got the job. 
+
+
+```{r pressure, echo=FALSE}
+
+d_member_staffers <- d_dates_full %>% filter(!is.na(member_id)) %>%
+  filter(!core_person_id %in% old_staffers$core_person_id) %>%
+  group_by(member_id, core_person_id) %>% 
+  summarise(total_days = sum(as.numeric(total_days_worked_period), na.rm = T)) %>%
+  ungroup() %>%
+  group_by(core_person_id) %>%
+  mutate(office_experience = 1:n(),
+         total_office = max(office_experience)) %>% ungroup() %>%
+  group_by(member_id) %>%
+  summarise (mean_days_office = mean(total_days),
+             total_staffers = n(),
+             office_experience_avg = mean(office_experience),
+             total_office_avg = mean(total_office)) %>%
+  left_join(member_race_gender, by = "member_id") %>%
+  mutate(race = recode(race, `0` = "White", `1` = "Black", `2` ="Hispanic", `3`="Asian/PI")) %>% ungroup()  %>%
+  mutate(black = ifelse(race == "Black", 1, 0),
+         hispanic = ifelse(race == "Hispanic", 1, 0),
+         asian = ifelse(race == "Asian/PI", 1, 0))
+
+d_member_staffers %>% group_by(race) %>%
+  summarise(average_days = mean(mean_days_office), 
+            average_staffers = mean(total_staffers),
+            average_office_experience = mean(office_experience_avg),
+            average_office_total = mean(total_office_avg))
+
+fit_member_days <- lm(mean_days_office ~ black + hispanic + asian, data = d_member_staffers) 
+fit_member_staffers <- lm(total_staffers ~ black + hispanic + asian, data = d_member_staffers) 
+fit_member_exp <- lm(office_experience_avg ~ black + hispanic + asian, data = d_member_staffers) 
+fit_member_total_exp <- lm(total_office_avg ~ black + hispanic + asian, data = d_member_staffers) 
+
+stargazer(fit_member_days, fit_member_staffers, fit_member_exp, fit_member_total_exp, type= "text", digits = 2, keep.stat	 = c("n"),  no.space=TRUE, column.sep.width="-12pt")
+
+```
+
+# Race matching algorithms
+
+I used a predictive model that uses a combination of Census data and the Florida Voter registration list(you hace read more in their paper [here](https://arxiv.org/pdf/1805.02109.pdf) to attribute a probability of each person identifying with each of the 4 racial groups, along with a categorical decision. 
+
+To get a sense of how accurate it was, I looked at people in 2010 exclusively (to match the report you sent). However, I can't seem to find in the data a reliable way to divide people into job ranks (ie. "chief of staff") and the report doesn't have an overall % break down. It feels like this should be available in the dataset, though (or perhaps something we can ask for).
+
+```{r race of staffers}
+race_staffer <- read_csv("race_staffer.csv") %>% dplyr::select(-X1)
+
+race_staffer %>% group_by(race) %>% summarise(race_total = n()) %>%
+  mutate(race_pct = race_total/sum(race_total)*100)
+
+```
+
+```{r}
+
+d_2010 <- d_dates_full %>% filter(start_date > "2010-1-1" & end_date < "2010-12-31") %>% left_join(race_staffer, by="core_person_id") %>%
+  left_join(member_race_gender, by = "member_id") %>%
+  mutate(race_member = recode(race.y, `0` = "White", `1` = "Black", `2` ="Hispanic", `3`="Asian/PI")) %>%
+  rename(race_staffer = race.x,
+         gender_staffer = gender.x,
+         gender_member = gender.y)
+
+d_2010 %>% group_by(race_staffer) %>% summarise(race_total = n()) %>%
+  mutate(race_pct = race_total/sum(race_total)*100)
+
+```
+I also looked at the racial distribution of staffers by race of the member. 
+Here's the distribution in Black members' offices:
+```{r}
+
+d_2010 %>% filter(race_member == "Black") %>% group_by(race_staffer) %>% summarise(race_total = n()) %>%
+  mutate(race_pct = race_total/sum(race_total)*100)
+
+
+```
+
+Here's the distribution in Hispanic members' offices:
+
+```{r}
+
+d_2010 %>% filter(race_member == "Hispanic") %>% group_by(race_staffer) %>% summarise(race_total = n()) %>%
+  mutate(race_pct = race_total/sum(race_total)*100)
+
+
+```
+
+Here's the distribution in Asian/PI members' offices:
+```{r}
+
+d_2010 %>% filter(race_member == "Asian/PI") %>% group_by(race_staffer) %>% summarise(race_total = n()) %>%
+  mutate(race_pct = race_total/sum(race_total)*100)
+
+```
+
+Here's the distribution in White members' offices:
+
+```{r}
+
+d_2010 %>% filter(race_member == "White") %>% group_by(race_staffer) %>% summarise(race_total = n()) %>%
+  mutate(race_pct = race_total/sum(race_total)*100)
+
+```
+
+

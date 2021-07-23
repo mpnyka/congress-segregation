@@ -1,0 +1,85 @@
+---
+title: "Untitled"
+author: "Mireia Triguero"
+date: "6/25/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, comment=NA, warning=FALSE, message=FALSE)
+library(wesanderson)
+library(stargazer)
+library(lfe)
+
+setwd("~/Desktop/Sociology/RA/Data")
+options(qwraps2_markup = "markdown")
+race_staffer <- read_csv("race_staffer.csv") %>% dplyr::select(-X1)
+molly_dat <- read_csv("staff_rank_data.csv")
+
+  
+```
+
+
+```{r molly variables}
+staffers_107 <- molly_dat %>% 
+  filter(congress==107) %>% 
+  dplyr::select(core_person_id) %>% 
+  distinct()
+
+molly_dat2 <- molly_dat %>% filter(!core_person_id %in% staffers_107$core_person_id) %>% 
+  group_by(core_person_id) %>% 
+  arrange(congress, core_person_id) %>%
+  mutate(first_job = first(congress)) %>% 
+  mutate(hill1 = ifelse(congress == first_job, 1, NA)) %>% 
+  fill(hill1) %>%
+  mutate(hill_experience = cumsum(hill1)*2) %>%
+  ungroup() %>%
+  mutate(gender = fct_relevel(gender, "M"))
+
+```
+
+```{r adding member characteristic}
+## adding member_id (unique id for member-office) to dataset and then match to racial and gender data of member
+
+molly_dat3 <- molly_dat2 %>% left_join(member_office) %>% 
+  left_join(member_race_gender, by = "member_id") %>%
+  left_join(member_party, by = "member_id") %>%
+  rename(gender = gender.x,
+         gender_member = gender.y,
+         race_member = race) %>%
+  mutate(female_member = ifelse(gender_member == 1, 1, 0),
+         democrat = ifelse(party_id == 2, 1, 0))
+
+
+```
+
+
+```{r molly model}
+
+fe_molly <- felm(salary ~ gender + ptime + log(totworkdays) + rank + nondc + notfulltime + hill_experience + female_member + democrat | congress, data = subset(molly_dat3, molly_dat3$chamber == "SENATE"))
+
+summary(fe_molly)
+
+molly_pay <- lm(salary ~ gender + totworkdays + rank + nondc + notfulltime)
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+
+dat <- molly_dat3 %>% left_join(race_staffer, by = c("core_person_id", "gender")) %>% 
+  mutate(white = ifelse(race == "nh_white", 1, 0),
+         black = ifelse(race == "nh_black", 1, 0),
+         asian = ifelse(race == "asian", 1, 0),
+         hispanic = ifelse(race == "hispanic", 1, 0))
+
+fe_molly_race <- felm(salary ~ gender + black + ptime + totworkdays + as.factor(rank) + nondc + notfulltime + hill_experience + as.factor(race_member) | congress, data = subset(dat, dat$chamber == "SENATE"))
+
+summary(fe_molly_race)
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

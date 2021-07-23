@@ -1,0 +1,167 @@
+---
+title: "May 19th report"
+author: "Mireia Triguero"
+date: "5/14/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, comment=NA, warning=FALSE, message=FALSE)
+library(stargazer)
+library(wesanderson)
+setwd("~/Desktop/Sociology/RA/Data")
+source("james_RA.R")
+options(qwraps2_markup = "markdown")
+
+```
+
+## Race matching algorithm
+
+Here's the average probability of being in each racial group for everyone in the data
+```{r race of staffers}
+race_staffer <- read_csv("race_staffer.csv") %>% dplyr::select(-X1)
+
+race_staffer %>% summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean)
+
+```
+
+## House 2010 race staffers
+
+Here's the average probability of being in each racial group for staffers in the house in 2010.
+
+```{r}
+
+d_2010_house <- d_dates_full %>% filter(start_date > "2010-1-1" & end_date < "2010-12-31") %>%
+  filter(office_type_id =="HM") %>%
+  left_join(race_staffer, by="core_person_id") %>%
+  left_join(member_race_gender, by = "member_id") %>%
+  mutate(race_member = recode(race.y, `0` = "White", `1` = "Black", `2` ="Hispanic", `3`="Asian/PI")) %>%
+  rename(race_staffer = race.x,
+         gender_staffer = gender.x,
+         gender_member = gender.y)
+
+d_2010_house %>% ungroup() %>% summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean)
+
+```
+
+Here's the average probability of being in each racial group for staffers in Black house members' offices:
+```{r}
+
+d_2010_house %>% filter(race_member == "Black") %>% ungroup() %>% summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean)
+
+
+```
+
+Here's the average probability of being in each racial group for staffers in Hispanic house members' offices:
+
+```{r}
+
+d_2010_house %>% filter(race_member == "Hispanic") %>% ungroup() %>% summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean)
+
+
+```
+
+Here's the average probability of being in each racial group for staffers in Asian/PI house members' offices:
+```{r}
+
+d_2010_house %>% filter(race_member == "Asian/PI") %>% ungroup() %>% summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean)
+
+```
+
+Here's the average probability of being in each racial group for staffers in White house members' offices:
+
+```{r}
+
+d_2010_house %>% filter(race_member == "White") %>% ungroup() %>% summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean)
+
+```
+
+## Senate 2010 race staffers
+Here's the average probability of being in each racial group for staffers in the senate in 2010.
+
+```{r}
+
+d_2010_senate <- d_dates_full %>% filter(start_date > "2010-1-1" & end_date < "2010-12-31") %>%
+  filter(office_type_id =="SM") %>%
+  left_join(race_staffer, by="core_person_id") %>%
+  left_join(member_race_gender, by = "member_id") %>%
+  mutate(race_member = recode(race.y, `0` = "White", `1` = "Black", `2` ="Hispanic", `3`="Asian/PI")) %>%
+  rename(race_staffer = race.x,
+         gender_staffer = gender.x,
+         gender_member = gender.y)
+
+d_2010_senate %>% ungroup() %>% summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean)
+
+```
+
+Here's the average probability of being in each racial group for staffers in Black senators' offices:
+```{r}
+
+d_2010_senate %>% filter(race_member == "Black") %>% ungroup() %>% summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean)
+
+
+```
+
+Here's the average probability of being in each racial group for staffers in Hispanic  senators' offices:
+
+```{r}
+
+d_2010_senate %>% filter(race_member == "Hispanic") %>% ungroup() %>% summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean)
+
+
+```
+
+Here's the average probability of being in each racial group for staffers in Asian/PI senators' offices:
+```{r}
+
+d_2010_senate %>% filter(race_member == "Asian/PI") %>% ungroup() %>% summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean)
+
+```
+
+Here's the average probability of being in each racial group for staffers in White senators' offices:
+
+```{r}
+
+d_2010_senate %>% filter(race_member == "White") %>% ungroup() %>% summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean)
+
+```
+## Chief of staff comparison
+I took the staffers whose salary title was "Chief of staff" in the House in 2010 and looked at the average race probabilities of each racial group and compared it to the House report you sent. I did the same for gender to have a "ground truth" of the disparity between the report and what's in the our data. You can see that the disparity in gender from the report and our data is not that dissimilar from the disparity in the inputed race and the race in the report. 
+```{r}
+
+chief_staffer_house <- d_dates_full %>% filter(salary_title_id==22 & office_type_id=="HM") %>% filter(start_date > "2009-12-31" & end_date < "2011-01-01") %>% distinct(core_person_id) %>%
+  left_join(race_staffer) 
+
+#chief_staffer_house %>% group_by(race) %>% summarise(race_total = n()) %>%
+  #mutate(race_pct = race_total/sum(race_total)*100)
+
+chief_staffer_house %>% summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean)
+
+```
+
+![race for chief of staff in the report](house_race.png)
+
+```{r}
+chief_staffer_house_g <- d_dates_full %>% filter(salary_title_id==22 & office_type_id=="HM") %>% filter(start_date > "2009-12-31" & end_date < "2011-01-01") %>% distinct(core_person_id) %>%
+  left_join(core_person) 
+
+chief_staffer_house_g %>% group_by(gender) %>% summarise(gender_total = n()) %>%
+  mutate(gender_pct = gender_total/sum(gender_total)*100)
+
+
+```
+![gender for chief of staff in the report](gender_house.png)
+
+## Fattah's office
+
+Looking at this table the rate of missclassification for blacks is 0.8, which is extremely high. 
+
+```{r}
+fattah_staffers <- read_csv("fattah_staffers.csv") %>% mutate(actual_race = tolower(`Actual Race`))
+
+table(fattah_staffers$race, fattah_staffers$actual_race)
+
+```
+

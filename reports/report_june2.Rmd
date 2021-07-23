@@ -1,0 +1,110 @@
+---
+title: "June 2nd report"
+author: "Mireia Triguero"
+date: "6/01/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, comment=NA, warning=FALSE, message=FALSE)
+library(stargazer)
+library(wesanderson)
+setwd("~/Desktop/Sociology/RA/Data")
+source("james_RA.R")
+options(qwraps2_markup = "markdown")
+race_staffer <- read_csv("race_staffer.csv") %>% dplyr::select(-X1)
+
+```
+
+## Can you provide the probabilities of the race House and Senate staffers in our dataset?
+
+### House
+
+```{r}
+d_salaries_year_house %>% left_join(race_staffer) %>% ungroup() %>% summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean) %>% mutate_if(is.numeric, round, 2)
+
+```
+### Senate
+
+```{r}
+
+d_salaries_year_senate %>% left_join(race_staffer) %>% ungroup() %>% summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean) %>% mutate_if(is.numeric, round, 2)
+
+```
+
+## Can you provide these probabilities based upon lawmakers’ Race, Gender, Party (We only have data for 2010 right now)
+
+
+### Race * Party
+
+```{r}
+d_members_races <- d_salaries_member_year %>% left_join(member_race_gender) %>% 
+  left_join(member_party) %>% 
+  rename(race_member = race, gender_member = gender) %>% 
+  left_join(race_staffer, by = "core_person_id") %>% 
+  filter(party_id != 3) %>% ## ignores independents
+  mutate(race_party = case_when(
+    race_member == 0 & party_id == 2 ~ "white_dem",
+    race_member == 0 & party_id == 1 ~ "white_rep",
+    race_member == 1 & party_id == 2 ~ "black_dem",
+    race_member == 1 & party_id == 1 ~ "black_rep",
+    race_member == 2 & party_id == 2 ~ "hispanic_dem",
+    race_member == 2 & party_id == 1 ~ "hispanic_rep",
+    race_member == 3 & party_id == 2 ~ "asian_dem",
+    race_member == 3 & party_id == 1 ~ "asian_rep",
+    TRUE ~ "other"
+  ))
+
+d_members_races %>% group_by(race_party) %>% summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean) %>% mutate_if(is.numeric, round, 2)
+
+```
+
+### Gender
+
+```{r}
+d_members_races %>% group_by(gender_member) %>% summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean) %>% mutate_if(is.numeric, round, 2) %>% mutate(gender_member = ifelse(gender_member == 0, "male", "female"))
+
+```
+
+
+## Which members of congress stand out the most?
+### Which offices are racial minorities less represented? 
+Top whitest offices members (93% or higher probability that their staff is white)
+
+```{r}
+
+d_members_races %>% group_by(member_id) %>% summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean) %>% arrange(desc(nh_white)) %>% mutate_if(is.numeric, round, 2) %>% filter(nh_white>0.92) %>% left_join(member_race_gender) %>% select(-suffix) %>% print(width = Inf)
+
+```
+
+### Which officers are racial minorities best represented? 
+Top non-white representation members (less than 45% white)
+```{r}
+
+d_members_races %>% group_by(member_id) %>% summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean) %>% arrange(nh_white) %>% mutate_if(is.numeric, round, 2) %>% filter(nh_white<0.45) %>% left_join(member_race_gender)%>% select(-suffix) %>% print(width = Inf)
+  
+```
+
+Top black represented members (28% or more prob of black staff) 
+```{r}
+
+d_members_races %>% group_by(member_id) %>% summarise_at(c("asian", "hispanic", "nh_black", "nh_white"), mean) %>% arrange(desc(nh_black)) %>% mutate_if(is.numeric, round, 2) %>% filter(nh_black>0.28) %>% left_join(member_race_gender) %>% select(-suffix) %>% print(width = Inf)
+  
+```
+
+## About next steps:
+
+Here's some of the questions in your email + some of the questions/clarifications that I have:
+
+"Do they work in Congress for a long time before becoming top earners?"  Do you want a distribution of years in Congress? or simply a Y/N distribution? In which case how do we define long-time? 
+
+"Do they they start at the bottom and work their way up? Do they enter at mid-level positions?" A thing to consider before answering both these questions (and really the one before once we define "long-time") is that our data spans 13 years but it's not following a specific cohort. It would probably make sense to look at just one year (o 2-3 years) at the tail-end of our data (2011-13) and then look at the years before to compile a work history (in Congress) of the staffers. 
+
+"how does this differ for staffers based upon their race (i know we are not using the assigned race data, but im not sure how to word this at the moment. thus do those with high probability of being whites have a different career trajectories than those who have a high probability of being black)." 
+
+"How long does it racial minorities compared to white staffers to become a top paid staff?" 
+
+"How long does it take racial minorities compared to white staffers to become top earners in the offices  white lawmakers vs non-white lawmakers?  (see note below)" Is this only for those who stay only in one office throughout their careers? 
+

@@ -1,0 +1,252 @@
+---
+title: "May 19th report"
+author: "Mireia Triguero"
+date: "5/14/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, comment=NA, warning=FALSE, message=FALSE)
+library(stargazer)
+library(wesanderson)
+setwd("~/Desktop/Sociology/RA/Data")
+source("james_RA.R")
+options(qwraps2_markup = "markdown")
+
+```
+
+## Race matching algorithm
+
+Here's the race distribution for everyone in the data
+```{r race of staffers}
+race_staffer <- read_csv("race_staffer.csv") %>% dplyr::select(-X1)
+
+race_staffer %>% group_by(race) %>% summarise(race_total = n()) %>%
+  mutate(race_pct = race_total/sum(race_total)*100)
+
+```
+
+## House 2010 race staffers
+
+Here's the race distribution for staffers in the house in 2010.
+
+```{r}
+
+d_2010_house <- d_dates_full %>% filter(start_date > "2010-1-1" & end_date < "2010-12-31") %>%
+  filter(office_type_id =="HM") %>%
+  left_join(race_staffer, by="core_person_id") %>%
+  left_join(member_race_gender, by = "member_id") %>%
+  mutate(race_member = recode(race.y, `0` = "White", `1` = "Black", `2` ="Hispanic", `3`="Asian/PI")) %>%
+  rename(race_staffer = race.x,
+         gender_staffer = gender.x,
+         gender_member = gender.y)
+
+d_2010_house %>% group_by(race_staffer) %>% summarise(race_total = n()) %>%
+  mutate(race_pct = race_total/sum(race_total)*100)
+
+```
+
+Here's the distribution in Black house members' offices:
+```{r}
+
+d_2010_house %>% filter(race_member == "Black") %>% group_by(race_staffer) %>% summarise(race_total = n()) %>%
+  mutate(race_pct = race_total/sum(race_total)*100)
+
+
+```
+
+Here's the distribution in Hispanic house members' offices:
+
+```{r}
+
+d_2010_house %>% filter(race_member == "Hispanic") %>% group_by(race_staffer) %>% summarise(race_total = n()) %>%
+  mutate(race_pct = race_total/sum(race_total)*100)
+
+
+```
+
+Here's the distribution in Asian/PI house members' offices:
+```{r}
+
+d_2010_house %>% filter(race_member == "Asian/PI") %>% group_by(race_staffer) %>% 
+  summarise(race_total = n()) %>%
+  mutate(race_pct = race_total/sum(race_total)*100)
+
+```
+
+Here's the distribution in White house members' offices:
+
+```{r}
+
+d_2010_house %>% filter(race_member == "White") %>% group_by(race_staffer) %>% summarise(race_total = n()) %>%
+  mutate(race_pct = race_total/sum(race_total)*100)
+
+```
+
+## Senate 2010 race staffers
+Here's the race distribution for staffers in the house in 2010.
+
+```{r}
+
+d_2010_senate <- d_dates_full %>% filter(start_date > "2010-1-1" & end_date < "2010-12-31") %>%
+  filter(office_type_id =="SM") %>%
+  left_join(race_staffer, by="core_person_id") %>%
+  left_join(member_race_gender, by = "member_id") %>%
+  mutate(race_member = recode(race.y, `0` = "White", `1` = "Black", `2` ="Hispanic", `3`="Asian/PI")) %>%
+  rename(race_staffer = race.x,
+         gender_staffer = gender.x,
+         gender_member = gender.y)
+
+d_2010_senate %>% group_by(race_staffer) %>% summarise(race_total = n()) %>%
+  mutate(race_pct = race_total/sum(race_total)*100)
+
+```
+
+Here's the distribution in Black senators' offices:
+```{r}
+
+d_2010_senate %>% filter(race_member == "Black") %>% group_by(race_staffer) %>% summarise(race_total = n()) %>%
+  mutate(race_pct = race_total/sum(race_total)*100)
+
+
+```
+
+Here's the distribution in Hispanic  senators' offices:
+
+```{r}
+
+d_2010_senate %>% filter(race_member == "Hispanic") %>% group_by(race_staffer) %>% summarise(race_total = n()) %>%
+  mutate(race_pct = race_total/sum(race_total)*100)
+
+
+```
+
+Here's the distribution in Asian/PI senators' offices:
+```{r}
+
+d_2010_senate %>% filter(race_member == "Asian/PI") %>% group_by(race_staffer) %>% summarise(race_total = n()) %>%
+  mutate(race_pct = race_total/sum(race_total)*100)
+
+```
+
+Here's the distribution in White senators' offices:
+
+```{r}
+
+d_2010_senate %>% filter(race_member == "White") %>% group_by(race_staffer) %>% summarise(race_total = n()) %>%
+  mutate(race_pct = race_total/sum(race_total)*100)
+
+```
+## Distribution of race by salary groups in 2010
+
+group by quintile
+
+```{r}
+
+d_salary2010 <- d_salaries_year %>% filter (year == 2010) %>% 
+  filter(mean_salary > 0) %>%
+  left_join(race_staffer) %>%
+  ungroup() %>%
+  mutate(salary_rank = ntile(mean_salary, n=3))
+
+
+d_salary2010 %>% group_by(salary_rank, race) %>%
+  tally()  %>%
+  mutate(pct = n/sum(n) * 100) %>% arrange(race)
+
+
+
+```
+
+## Comparing to senate report on salaries
+
+The senate report you sent me includes aggregate salaries by racial group (page 89), which is  useful to compare it with my data. However, I get pretty different numbers. For one, my overall salary numbers don't seem to match the salary numbers in that report (in the next section I look at the gender salaries as a sanity check, since gender is something in our data, and those also don't seem to match). This might be related to how I'm aggregating the data, but I'm not sure about what I could be going wrong. 
+
+Currently, I'm aggregating all the salary inputs a person got in a year (usually this means the salary for the 180 day term, in the case of the senate, but this would also include all sorts of "corrections", such as negative salaries and salaries that only span for 1 or 2 days), then I divide that number by the total number of days they worked in a year. I did this after realizing that many staffers might have only worked for part of the year and thus, it wasn't comparable to an annual salary.
+
+The table below shows the annual salaries (computed as explained above) by racial group for Senate staffers (includes exclusively those who work directly for a Senate member, which I'm not 100% sure is the same as in the report). 
+
+
+```{r}
+
+d_salary2001 <- d_salaries_year_senate %>% filter (year == 2001) %>% 
+  filter(mean_salary>0) %>%
+  filter(total_days_worked_year>0) %>%
+  mutate(year_salary = mean_salary/total_days_worked_year*365) %>%
+  left_join(race_staffer) 
+
+d_salary2001 %>% group_by(race) %>% summarise(salary_race = mean(year_salary))
+
+```
+Here's a screenshot from the report (page 89). I think the comparable group would be staffers in Washington? But I'm also not sure. Do you know if our dataset includes staffers that work in the state offices?
+![Screenshot from the report](race_senate.png)
+This could mean that the algorithm is biased towards white (ie., it's categorizing as "white" people who would self-identify as non-white), which would explain why the salary gap seems smaller in our data. However, given that gender and overall average salary also doesn't check out (below), it's hard to draw any conclusions yet.
+
+## Sanity check with overall salary
+
+According to the report, the average salary in 2001 for Senate staffers in Washington was 49,202. In the data it is 40,503. 
+
+```{r}
+d_salary_senate2001 <- d_salaries_year_senate %>% filter(year == 2001) %>% 
+  filter(total_days_worked_year>0) %>%
+  filter(mean_salary>0) %>%
+  mutate(year_salary = mean_salary/total_days_worked_year*365) 
+
+```
+
+## Sanity check with salaries in 2001 in the Senate by gender
+
+
+```{r}
+
+d_salary_senate2001 %>% left_join(core_person) %>%
+  filter(!is.na(gender)) %>%
+  group_by(gender) %>%
+  summarize(salary_senate = mean(year_salary))
+
+```
+Here's a screenshot from the report (page 87)
+
+![Screenshot from the report](gender_senate.png)
+In short, the numbers in our data don't really match those in the report (even ignoring race). However, the report says they got their numbers from only 24 offices of senators. So one possibility is that they just got a sample that is uniquely different from the total population (which is what we have). To check if that's the case, I created a function to "sample" 24 offices from our total population of senators, and I repated that procedure multiple times to get a distibution and see where the report's average salary falls within that distribution. 
+
+In the graph below you can see the distribution of these samples (I repeated the procedure 2000 times). The dashed line is the average in the report. It's a rare event, but not an impossible one, which means it is possible that the difference we are seeing in averages is due to their sample being particularly unique. The bad news about that is that this leaves us a bit on square one on having a "gold standard" to compare to our imputed race distribution to.
+
+```{r bootstrapping}
+
+senate_salary_avgs <- d_salary_senate2001 %>% group_by(member_id) %>% summarise(avg_salary = mean(year_salary))
+
+reps <- 2000
+avgs <- rep(NA, reps)
+
+for (i in 1:reps){
+  random24 <- sample(senate_salary_avgs$avg_salary, 24, replace = F)
+  avgs[i] <- mean(random24)
+}
+
+avgs_df <- as_tibble(avgs)
+
+p <- ggplot(avgs_df, aes(x=value)) + geom_histogram(fill = wes_palette(n=1, name="GrandBudapest1")) 
+
+p + geom_vline(xintercept=45847, color=wes_palette(n=4, name="GrandBudapest1")[4], linetype="dashed", size=1) + geom_vline(aes(xintercept = mean(value)), size=1, color=wes_palette(n=3, name="GrandBudapest1")[3]) + xlab("average salary")
+
+
+```
+
+ 
+```{r}
+
+##Why are these two different?
+
+## first one is the average salary of the staffers in a given office, averaged over all the offices
+
+## The second one is the average over all the people in the senate. 
+## mean(senate_salary_avgs$avg_salary)
+
+## mean(d_salary_senate2001$year_salary)
+
+```
+
+
